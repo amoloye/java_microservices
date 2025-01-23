@@ -1,0 +1,11 @@
+services:
+  mysql:
+    image: mysql:8.3.0
+    container_name: mysql_db  #since i already have mysql as a container name in order-service, i might as well change the name
+    environment:
+      MYSQL_ROOT_PASSWORD: adegboola
+    ports:
+      - "3307:3306"   #also the entry port on my local machine is change but the mysql port remains because it conflicts with order-service
+    volumes:
+      - ./new_mysql:/var/lib/mysql   #change the entry name for volume because it conflicts with order-service in my docker-hub
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
