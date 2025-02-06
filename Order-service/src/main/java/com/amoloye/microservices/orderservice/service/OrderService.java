@@ -2,10 +2,16 @@ package com.amoloye.microservices.orderservice.service;
 
 import com.amoloye.microservices.orderservice.client.InventoryClient;
 import com.amoloye.microservices.orderservice.dto.OrderRequest;
+import com.amoloye.microservices.orderservice.event.OrderPlacedEvent;
 import com.amoloye.microservices.orderservice.model.Order;
 import com.amoloye.microservices.orderservice.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+
+
 
 import java.util.UUID;
 
@@ -14,9 +20,13 @@ import java.util.UUID;
 public class OrderService {
     private final OrderRepository orderRepository;
     private final InventoryClient inventoryClient;
+    //Inject kafkaTemplate
+    private final KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate;
+
+    Logger log = LoggerFactory.getLogger(OrderService.class);
 
     public void placeOrder(OrderRequest orderRequest){
-      var isProductInStock=  inventoryClient.isInStock(orderRequest.skuCode(), orderRequest.quantity());
+        var isProductInStock = inventoryClient.isInStock(orderRequest.skuCode(), orderRequest.quantity());
 
       if (isProductInStock) {
           Order order = new Order();
@@ -25,12 +35,20 @@ public class OrderService {
           order.setSkuCode(orderRequest.skuCode());
           order.setQuantity(orderRequest.quantity());
 
+          log.debug("Saving order: {}", order);
           orderRepository.save(order);
+          // Send the message to Kafka Topic
+          //send out OrderNumber and Email
+
+          OrderPlacedEvent orderPlacedEvent = new OrderPlacedEvent(order.getOrderNumber(),
+                  orderRequest.userDetails().email());
+          log.info("Start - Sending OrderPlacedEvent {} to Kafka topic order-placed", orderPlacedEvent);
+          kafkaTemplate.send("order-placed", orderPlacedEvent);
+          log.info("End - Sending OrderPlacedEvent {} to Kafka topic order-placed", orderPlacedEvent);
+
       }else{
           throw new RuntimeException("Product with SkuCode " + orderRequest.skuCode() + " is not in stock");
       }
-
-
 
 
     }

@@ -38,4 +38,10 @@ public class ProductService {
                         product.getPrice()))
                 .toList();
     }
+
+    public String removeAllProducts() {
+        productRepository.deleteAll();
+        log.info("All products have been removed.");
+        return "All products have been removed.";
+    }
 }
